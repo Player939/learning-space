@@ -331,11 +331,13 @@ saveButton.onclick = () => {
         if (p === 'Player1') { highScore1 = h; step1 = s; }
         if (p === 'Player2') { highScore2 = h; step2 = s; }
       });
-      updateSliders();
+      applyMenuValues();
+
     } catch {
       step1 = Number(localStorage.getItem('player1Speed')) || step1;
       step2 = Number(localStorage.getItem('player2Speed')) || step2;
-      updateSliders();
+      applyMenuValues();
+
     }
   }
 
@@ -364,6 +366,7 @@ saveButton.onclick = () => {
 </script>
 </body>
 </html>
+
 
 
 
