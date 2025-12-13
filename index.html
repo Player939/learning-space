@@ -39,11 +39,114 @@
   </style>
 </head>
 <body>
+  <!-- ===== GAME MENU ===== -->
+<div id="menu" style="
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: #111;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 20000;
+  font-family: sans-serif;
+">
+  <h1>Learning Space</h1>
+
+  <h3>Gamemode:</h3>
+  <label><input type="radio" name="mode" value="1" checked> Single Player</label>
+  <label><input type="radio" name="mode" value="2"> Two Players</label>
+
+  <br><br>
+
+  <div style="text-align:center;">
+    <span>Player 1 Speed:</span>
+    <input type="range" id="menuSpeed1" min="1" max="10">
+    <br><br>
+    <span>Player 2 Speed:</span>
+    <input type="range" id="menuSpeed2" min="1" max="10">
+  </div>
+
+  <br><br>
+
+  <button id="startButton" style="padding: 10px 20px; font-size: 18px; cursor:pointer;">
+    Start Game
+  </button>
+</div>
+  <button id="saveButton" style="
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  font-weight: bold;
+  z-index: 15000;
+  display: none;
+">Save Now</button>
 <script>
   // ---------- GLOBAL VARIABLES ----------
   let gameOver = false;
   let timeLeft = 60;
   let timerInterval;
+
+  // ===== MENU LOGIC =====
+let gameMode = 1; // Default: single player
+
+const menu = document.getElementById('menu');
+const modeButtons = document.getElementsByName('mode');
+const startButton = document.getElementById('startButton');
+
+const menuSpeed1 = document.getElementById('menuSpeed1');
+const menuSpeed2 = document.getElementById('menuSpeed2');
+
+// Load speeds into sliders once API/localStorage finishes loading
+function applyMenuValues() {
+  menuSpeed1.value = step1;
+  menuSpeed2.value = step2;
+}
+
+startButton.onclick = () => {
+  // Set mode
+  modeButtons.forEach(rb => { if (rb.checked) gameMode = Number(rb.value); });
+
+  // Apply slider values
+  step1 = Number(menuSpeed1.value);
+  step2 = Number(menuSpeed2.value);
+
+  // Save them immediately
+  syncSave();
+
+  // Hide menu, show game
+  menu.style.display = "none";
+
+  //Show Save Now button
+  saveButton.style.display = 'block';
+
+  // Hide Player 2 if single-player
+  if (gameMode === 1) {
+    player2.style.display = "none";
+  }
+
+  startTimer();
+  requestAnimationFrame(gameLoop);
+};
+
+  // ===== SAVE NOW BUTTON =====
+const saveButton = document.getElementById('saveButton');
+
+saveButton.onclick = () => {
+  syncSave();
+  alert('Scores and speeds saved!');
+};
+// ===== SAVE NOW BUTTON =====
+const saveButton = document.getElementById('saveButton');
+
+saveButton.onclick = () => {
+  syncSave();
+  alert('Scores and speeds saved!');
+};
 
   // ---------- GAME AREA ----------
   const gameArea = document.createElement('div');
@@ -259,53 +362,15 @@
     }
   }
 
-  // ---------- SPEED SLIDERS ----------
-  const sliderContainer = document.createElement('div');
-  sliderContainer.className = 'slider-container';
-  document.body.appendChild(sliderContainer);
-
-  function createSlider(labelText, initialValue, onChange) {
-    const label = document.createElement('span');
-    label.textContent = labelText;
-    label.className = 'slider-label';
-    const slider = document.createElement('input');
-    slider.type = 'range';
-    slider.min = 1;
-    slider.max = 10;
-    slider.value = initialValue;
-    slider.oninput = e => onChange(Number(e.target.value));
-    sliderContainer.appendChild(label);
-    sliderContainer.appendChild(slider);
-    sliderContainer.appendChild(document.createElement('br'));
-    return slider;
-  }
-
-  const slider1 = createSlider('Player 1 Speed:', step1, val => { step1 = val; });
-  const slider2 = createSlider('Player 2 Speed:', step2, val => { step2 = val; });
-
-  function updateSliders() {
-    slider1.value = step1;
-    slider2.value = step2;
-  }
-
-  // ---------- SAVE NOW BUTTON ----------
-  const saveButton = document.createElement('button');
-  saveButton.id = 'saveButton';
-  saveButton.textContent = 'Save Now';
-  document.body.appendChild(saveButton);
-  saveButton.onclick = () => {
-    syncSave();
-    alert('Scores and speeds saved!');
-  };
-
   // ---------- START ----------
   (async () => {
-    await syncLoad();
-    startTimer();
-    requestAnimationFrame(gameLoop);
-  })();
+  await syncLoad();
+  applyMenuValues();
+})();
+
 </script>
 </body>
 </html>
+
 
 
