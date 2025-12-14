@@ -5,3 +5,5 @@ Red square is Player One, you move with WASD keys. Blue square is Player Two, yo
 The sliders at the bottom are for manually changing player speed.
 
 Enjoy?
+
+(There might be online multiplayer soon)
