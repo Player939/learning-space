@@ -1,1 +1,276 @@
+  // ---------- GLOBAL VARIABLES ----------
+  let gameOver = false;
+  let timeLeft = 60;
+  let timerInterval;
 
+  // ===== MENU LOGIC =====
+let gameMode = 1; // Default: single player
+
+const menu = document.getElementById('menu');
+const modeButtons = document.getElementsByName('mode');
+const startButton = document.getElementById('startButton');
+
+const menuSpeed1 = document.getElementById('menuSpeed1');
+const menuSpeed2 = document.getElementById('menuSpeed2');
+
+// Load speeds into sliders once API/localStorage finishes loading
+function applyMenuValues() {
+  menuSpeed1.value = step1;
+  menuSpeed2.value = step2;
+}
+
+startButton.onclick = () => {
+  // Set mode
+  modeButtons.forEach(rb => { if (rb.checked) gameMode = Number(rb.value); });
+
+  // Apply slider values
+  step1 = Number(menuSpeed1.value);
+  step2 = Number(menuSpeed2.value);
+
+  // Save them immediately
+  syncSave();
+
+  // Hide menu, show game
+  menu.style.display = "none";
+
+  //Show Save Now button
+  saveButton.style.display = 'block';
+
+  // Hide Player 2 if single-player
+  if (gameMode === 1) {
+    player2.style.display = "none";
+  }
+
+  startTimer();
+  requestAnimationFrame(gameLoop);
+};
+
+  // ===== SAVE NOW BUTTON =====
+const saveButton = document.getElementById('saveButton');
+
+saveButton.onclick = () => {
+  syncSave();
+  alert('Scores and speeds saved!');
+};
+
+  // ---------- GAME AREA ----------
+  const gameArea = document.createElement('div');
+  Object.assign(gameArea.style, {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: '600px',
+    height: '600px',
+    backgroundColor: '#222',
+    border: '3px solid #000',
+    zIndex: 9999
+  });
+  document.body.appendChild(gameArea);
+
+  // ---------- PLAYER CREATION ----------
+  function createPlayer(color, startX, startY) {
+    const player = document.createElement('div');
+    Object.assign(player.style, {
+      position: 'absolute',
+      width: '40px',
+      height: '40px',
+      backgroundColor: color,
+      top: startY + 'px',
+      left: startX + 'px'
+    });
+    return player;
+  }
+
+  // Player 1 (WASD)
+  const player1 = createPlayer('#ff4d4d', 100, 180);
+  gameArea.appendChild(player1);
+  let score1 = 0;
+  let highScore1 = Number(localStorage.getItem('highScore1')) || 0;
+  let step1 = Number(localStorage.getItem('player1Speed')) || 3;
+
+  // Player 2 (Arrow Keys)
+  const player2 = createPlayer('#4d4dff', 450, 180);
+  gameArea.appendChild(player2);
+  let score2 = 0;
+  let highScore2 = Number(localStorage.getItem('highScore2')) || 0;
+  let step2 = Number(localStorage.getItem('player2Speed')) || 3;
+
+  // ---------- SCORE DISPLAYS ----------
+  function makeLabel(text, top, left) {
+    const el = document.createElement('div');
+    el.textContent = text;
+    Object.assign(el.style, {
+      position: 'absolute',
+      top, left,
+      color: 'white',
+      fontWeight: 'bold'
+    });
+    gameArea.appendChild(el);
+    return el;
+  }
+
+  const scoreDisplay1 = makeLabel('Score: 0', '5px', '5px');
+  const highScoreDisplay1 = makeLabel('High Score: ' + highScore1, '25px', '5px');
+  const scoreDisplay2 = makeLabel('Score: 0', '5px', '500px');
+  const highScoreDisplay2 = makeLabel('High Score: ' + highScore2, '25px', '500px');
+
+  // ---------- TIMER ----------
+  const timerDisplay = makeLabel('Time: 60', '5px', '50%');
+  timerDisplay.style.transform = 'translateX(-50%)';
+
+  // ---------- COINS ----------
+  let coins = [];
+  function spawnCoin() {
+    const coin = document.createElement('div');
+    Object.assign(coin.style, {
+      position: 'absolute',
+      width: '30px',
+      height: '30px',
+      backgroundColor: 'gold',
+      borderRadius: '50%',
+      left: Math.floor(Math.random() * 570) + 'px',
+      top: Math.floor(Math.random() * 570) + 'px'
+    });
+    gameArea.appendChild(coin);
+    coins.push(coin);
+  }
+  for (let i = 0; i < 10; i++) spawnCoin();
+
+  // ---------- INPUT ----------
+  const keysPressed = {};
+  document.addEventListener('keydown', e => keysPressed[e.key] = true);
+  document.addEventListener('keyup', e => keysPressed[e.key] = false);
+
+  // ---------- GAME LOOP ----------
+  function gameLoop() {
+    if (!gameOver) {
+      movePlayer(player1, step1, 'w', 's', 'a', 'd');
+      movePlayer(player2, step2, 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight');
+      checkCollision(player1, 1);
+      checkCollision(player2, 2);
+    }
+    requestAnimationFrame(gameLoop);
+  }
+
+  function movePlayer(player, step, up, down, leftKey, rightKey) {
+    let top = parseInt(player.style.top);
+    let left = parseInt(player.style.left);
+    if (keysPressed[up]) top -= step;
+    if (keysPressed[down]) top += step;
+    if (keysPressed[leftKey]) left -= step;
+    if (keysPressed[rightKey]) left += step;
+    player.style.top = Math.max(0, Math.min(560, top)) + 'px';
+    player.style.left = Math.max(0, Math.min(560, left)) + 'px';
+  }
+
+  // ---------- COLLISION ----------
+  function checkCollision(player, id) {
+    for (let i = coins.length - 1; i >= 0; i--) {
+      const coin = coins[i];
+      const cx = parseInt(coin.style.left);
+      const cy = parseInt(coin.style.top);
+      const px = parseInt(player.style.left);
+      const py = parseInt(player.style.top);
+      if (px < cx + 30 && px + 40 > cx && py < cy + 30 && py + 40 > cy) {
+        gameArea.removeChild(coin);
+        coins.splice(i, 1);
+        spawnCoin();
+        if (id === 1) {
+          score1++;
+          scoreDisplay1.textContent = 'Score: ' + score1;
+        } else {
+          score2++;
+          scoreDisplay2.textContent = 'Score: ' + score2;
+        }
+      }
+    }
+  }
+
+  // ---------- TIMER ----------
+  function startTimer() {
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      timerDisplay.textContent = 'Time: ' + timeLeft;
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        gameOver = true;
+        Object.keys(keysPressed).forEach(k => keysPressed[k] = false);
+        updateHighScores();
+      }
+    }, 1000);
+  }
+
+  function updateHighScores() {
+    if (score1 > highScore1) {
+      highScore1 = score1;
+      highScoreDisplay1.textContent = 'High Score: ' + highScore1;
+    }
+    if (score2 > highScore2) {
+      highScore2 = score2;
+      highScoreDisplay2.textContent = 'High Score: ' + highScore2;
+    }
+    syncSave();
+    replayButton.style.display = 'block';
+    alert(`Time's up!\nPlayer 1: ${score1}\nPlayer 2: ${score2}`);
+  }
+
+  // ---------- REPLAY ----------
+  const replayButton = document.createElement('button');
+  replayButton.textContent = 'Replay';
+  Object.assign(replayButton.style, {
+    position: 'fixed',
+    bottom: '20px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    padding: '8px 16px',
+    fontWeight: 'bold',
+    display: 'none',
+    zIndex: 10000
+  });
+  document.body.appendChild(replayButton);
+  replayButton.onclick = () => location.reload();
+
+  // ---------- GOOGLE SHEETS ----------
+  const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwct-j94qIwoqet8fc3uss54WZ0uK2EsBpQSUkcb6N5nOtHofouSSsldnVZiaJ7XKlvOw/exec';
+
+  async function syncLoad() {
+    try {
+      const res = await fetch(SHEET_URL + '?action=getData');
+      const data = await res.json();
+      data.forEach(([p, h, s]) => {
+        if (p === 'Player1') { highScore1 = h; step1 = s; }
+        if (p === 'Player2') { highScore2 = h; step2 = s; }
+      });
+      applyMenuValues();
+
+    } catch {
+      step1 = Number(localStorage.getItem('player1Speed')) || step1;
+      step2 = Number(localStorage.getItem('player2Speed')) || step2;
+      applyMenuValues();
+
+    }
+  }
+
+  async function syncSave() {
+    try {
+      fetch(`${SHEET_URL}?action=setData&player=Player1&highScore=${highScore1}&speed=${step1}`);
+      fetch(`${SHEET_URL}?action=setData&player=Player2&highScore=${highScore2}&speed=${step2}`);
+      localStorage.setItem('player1Speed', step1);
+      localStorage.setItem('player2Speed', step2);
+      localStorage.setItem('highScore1', highScore1);
+      localStorage.setItem('highScore2', highScore2);
+    } catch {
+      localStorage.setItem('player1Speed', step1);
+      localStorage.setItem('player2Speed', step2);
+      localStorage.setItem('highScore1', highScore1);
+      localStorage.setItem('highScore2', highScore2);
+    }
+  }
+
+  // ---------- START ----------
+  (async () => {
+  await syncLoad();
+  applyMenuValues();
+})();
